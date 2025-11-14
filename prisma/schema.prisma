@@ -1,0 +1,198 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 2. แปลงตารางจาก ERD มาเป็น Models
+
+// ตาราง: ROLES (บทบาท)
+model Role {
+  role_id   Int    @id @default(autoincrement()) @map("role_id")
+  role_name String @map("role_name")
+  users     User[]
+
+  @@map("roles")
+}
+
+// ตาราง: USERS (ผู้ใช้)
+model User {
+  user_id            Int                 @id @default(autoincrement()) @map("user_id")
+  role_id            Int                 @map("role_id")
+  email              String              @unique
+  password_hash      String              @map("password_hash")
+  created_at         DateTime            @default(now()) @map("created_at")
+  
+  // Relations
+  role               Role                @relation(fields: [role_id], references: [role_id])
+  password_resets    PasswordReset[]
+  job_seeker_profile JobSeekerProfile?   @relation(name: "UserToJobSeekerProfile")
+  shop_profile       ShopProfile?        @relation(name: "UserToShopProfile")
+  reviews            Review[]
+
+  @@map("users")
+}
+
+// ตาราง: PASSWORD_RESETS (OTP/Token)
+model PasswordReset {
+  otp_id             Int       @id @default(autoincrement()) @map("otp_id")
+  user_id            Int       @map("user_id")
+  otp_code           String    @map("otp_code")
+  otp_expiry         DateTime  @map("otp_expiry")
+  reset_token        String?   @map("reset_token")
+  reset_token_expiry DateTime? @map("reset_token_expiry")
+  is_verified        Boolean   @default(false) @map("is_verified")
+  created_at         DateTime  @default(now()) @map("created_at")
+
+  // Relation
+  user               User      @relation(fields: [user_id], references: [user_id])
+
+  @@map("password_resets")
+}
+
+// ตาราง: JOB_SEEKER_PROFILES (โปรไฟล์ผู้หางาน)
+model JobSeekerProfile {
+  seeker_id      Int            @id @map("seeker_id") // PK และ FK จาก USERS.user_id
+  name           String
+  phone          String?
+  address        String?
+  skills         String?        // สามารถใช้ Json? ได้ถ้า DB รองรับ
+  experience     String?        // สามารถใช้ Json? ได้ถ้า DB รองรับ
+  available_days String?        @map("available_days")
+  profile_image  String?        @map("profile_image")
+  latitude       Float?
+  longitude      Float?
+
+  // Relations
+  user           User           @relation(name: "UserToJobSeekerProfile", fields: [seeker_id], references: [user_id])
+  matches        Match[]
+  applications   Application[]
+
+  @@map("job_seeker_profiles")
+}
+
+// ตาราง: SHOP_PROFILES (โปรไฟล์ร้านค้า)
+model ShopProfile {
+  shop_id     Int         @id @map("shop_id") // PK และ FK จาก USERS.user_id
+  shop_name   String      @map("shop_name")
+  description String?
+  address     String?
+  phone       String?
+  latitude    Float?
+  longitude   Float?
+  image_path  String?     @map("image_path")
+  created_at  DateTime    @default(now()) @map("created_at")
+  updated_at  DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  user        User        @relation(name: "UserToShopProfile", fields: [shop_id], references: [user_id])
+  jobs        Job[]
+  reviews     Review[]
+
+  @@map("shop_profiles")
+}
+
+// ตาราง: CATEGORIES (หมวดหมู่งาน)
+model Category {
+  category_id   Int    @id @default(autoincrement()) @map("category_id")
+  category_name String @unique @map("category_name")
+  jobs          Job[]
+
+  @@map("categories")
+}
+
+// ตาราง: JOBS (ประกาศหางาน/ตำแหน่งงาน)
+model Job {
+  job_id        Int           @id @default(autoincrement()) @map("job_id")
+  shop_id       Int           @map("shop_id")
+  category_id   Int           @map("category_id")
+  title         String
+  description   String?
+  work_day      String?       @map("work_day")
+  wage_per_hour Float?        @map("wage_per_hour")
+  num_positions Int           @default(1) @map("num_positions")
+  status        String        @default("open") // "open", "closed"
+  created_at    DateTime      @default(now()) @map("created_at")
+  updated_at    DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  shop          ShopProfile   @relation(fields: [shop_id], references: [shop_id])
+  category      Category      @relation(fields: [category_id], references: [category_id])
+  matches       Match[]
+  applications  Application[]
+  job_schedules JobSchedule[]
+
+  @@map("jobs")
+}
+
+// ตาราง: REVIEWS (รีวิว)
+model Review {
+  review_id  Int      @id @default(autoincrement()) @map("review_id")
+  user_id    Int      @map("user_id")
+  shop_id    Int      @map("shop_id")
+  rating     Int
+  comment    String?
+  created_at DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user       User        @relation(fields: [user_id], references: [user_id])
+  shop       ShopProfile @relation(fields: [shop_id], references: [shop_id])
+
+  @@unique([user_id, shop_id]) // User รีวิวร้านค้าได้ครั้งเดียว
+  @@map("reviews")
+}
+
+// ตาราง: MATCHES (การจับคู่)
+model Match {
+  match_id    Int               @id @default(autoincrement()) @map("match_id")
+  seeker_id   Int               @map("seeker_id")
+  job_id      Int               @map("job_id")
+  match_score Float?            @map("match_score")
+  time_match  DateTime          @default(now()) @map("time_match")
+
+  // Relations
+  seeker      JobSeekerProfile  @relation(fields: [seeker_id], references: [seeker_id])
+  job         Job               @relation(fields: [job_id], references: [job_id])
+
+  @@unique([seeker_id, job_id]) // ป้องกันการ Match ซ้ำ
+  @@map("matches")
+}
+
+// ตาราง: APPLICATIONS (การสมัครงาน)
+model Application {
+  application_id Int           @id @default(autoincrement()) @map("application_id")
+  seeker_id      Int           @map("seeker_id")
+  job_id         Int           @map("job_id")
+  status         String        // "pending", "approved", "rejected"
+  applied_at     DateTime      @default(now()) @map("applied_at")
+
+  // Relations
+  seeker         JobSeekerProfile @relation(fields: [seeker_id], references: [seeker_id])
+  job            Job            @relation(fields: [job_id], references: [job_id])
+  job_schedules  JobSchedule[]
+
+  @@unique([seeker_id, job_id]) // สมัครงานเดียวกันได้ครั้งเดียว
+  @@map("applications")
+}
+
+// ตาราง: JOB_SCHEDULES (ตารางนัดหมายงาน)
+model JobSchedule {
+  schedule_id    Int      @id @default(autoincrement()) @map("schedule_id")
+  job_id         Int      @map("job_id")
+  application_id Int      @map("application_id")
+  work_day       DateTime @map("work_day") // หรือใช้ @db.Date ถ้า DB รองรับ
+  start_time     DateTime @map("start_time") // หรือใช้ @db.Time ถ้า DB รองรับ
+  end_time       DateTime @map("end_time") // หรือใช้ @db.Time ถ้า DB รองรับ
+
+  // Relations
+  job            Job         @relation(fields: [job_id], references: [job_id])
+  application    Application @relation(fields: [application_id], references: [application_id])
+
+  @@map("job_schedules")
+}
