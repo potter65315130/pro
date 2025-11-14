@@ -1,15 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { User, Phone, MapPin, Briefcase, Award, Calendar, Upload } from 'lucide-react';
+import { User, Phone, MapPin, Briefcase, Award, Calendar, Navigation, Loader2 } from 'lucide-react';
 
 export default function CreateSeekerProfile() {
   const router = useRouter();
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [gettingLocation, setGettingLocation] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -22,10 +23,69 @@ export default function CreateSeekerProfile() {
     longitude: '',
   });
 
+  // ฟังก์ชันดึงตำแหน่งปัจจุบัน
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setError('เบราว์เซอร์ของคุณไม่รองรับการระบุตำแหน่ง');
+      return;
+    }
+
+    setGettingLocation(true);
+    setError('');
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        
+        setFormData(prev => ({
+          ...prev,
+          latitude: latitude.toString(),
+          longitude: longitude.toString(),
+        }));
+
+        // เรียก Reverse Geocoding API เพื่อแปลงพิกัดเป็นที่อยู่
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`
+          );
+          const data = await response.json();
+          
+          if (data.display_name) {
+            setFormData(prev => ({
+              ...prev,
+              address: data.display_name,
+            }));
+          }
+        } catch (err) {
+          console.error('Error getting address:', err);
+        }
+
+        setGettingLocation(false);
+      },
+      (error) => {
+        console.error('Error getting location:', error);
+        setError('ไม่สามารถดึงตำแหน่งได้ กรุณาอนุญาตการเข้าถึงตำแหน่ง');
+        setGettingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+
+    // Validate coordinates
+    if (!formData.latitude || !formData.longitude) {
+      setError('กรุณาระบุตำแหน่งที่ตั้ง (คลิก "ใช้ตำแหน่งปัจจุบัน" หรือกรอกพิกัดเอง)');
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch('/api/profile/seeker', {
@@ -34,6 +94,8 @@ export default function CreateSeekerProfile() {
         body: JSON.stringify({
           user_id: session?.user?.id,
           ...formData,
+          latitude: parseFloat(formData.latitude),
+          longitude: parseFloat(formData.longitude),
         }),
       });
 
@@ -111,6 +173,60 @@ export default function CreateSeekerProfile() {
               </div>
             </div>
 
+            {/* ตำแหน่งที่ตั้ง */}
+            <div className="bg-indigo-50 p-4 rounded-lg border-2 border-indigo-200">
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-medium text-gray-700">
+                  📍 ตำแหน่งที่ตั้ง *
+                </label>
+                <button
+                  type="button"
+                  onClick={getCurrentLocation}
+                  disabled={gettingLocation}
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 text-sm"
+                >
+                  {gettingLocation ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      กำลังค้นหา...
+                    </>
+                  ) : (
+                    <>
+                      <Navigation className="w-4 h-4" />
+                      ใช้ตำแหน่งปัจจุบัน
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <input
+                    type="text"
+                    value={formData.latitude}
+                    onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
+                    placeholder="Latitude (ละติจูด)"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm"
+                  />
+                </div>
+                <div>
+                  <input
+                    type="text"
+                    value={formData.longitude}
+                    onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
+                    placeholder="Longitude (ลองจิจูด)"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm"
+                  />
+                </div>
+              </div>
+
+              {formData.latitude && formData.longitude && (
+                <div className="text-xs text-green-700 bg-green-50 p-2 rounded">
+                  ✓ ตำแหน่ง: {parseFloat(formData.latitude).toFixed(6)}, {parseFloat(formData.longitude).toFixed(6)}
+                </div>
+              )}
+            </div>
+
             {/* ที่อยู่ */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -178,34 +294,6 @@ export default function CreateSeekerProfile() {
                   onChange={(e) => setFormData({ ...formData, available_days: e.target.value })}
                   placeholder="เช่น: จันทร์-ศุกร์, วันหยุดสุดสัปดาห์"
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                />
-              </div>
-            </div>
-
-            {/* Coordinates (Optional) */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Latitude (ไม่บังคับ)
-                </label>
-                <input
-                  type="text"
-                  value={formData.latitude}
-                  onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
-                  placeholder="13.7563"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Longitude (ไม่บังคับ)
-                </label>
-                <input
-                  type="text"
-                  value={formData.longitude}
-                  onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-                  placeholder="100.5018"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
                 />
               </div>
             </div>

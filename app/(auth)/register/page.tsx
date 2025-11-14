@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserPlus, Mail, Lock, User, AlertCircle, CheckCircle, Briefcase, Store } from 'lucide-react';
+import { signIn } from 'next-auth/react';
+import { UserPlus, Mail, Lock, User, AlertCircle, Briefcase, Store } from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -17,58 +18,82 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError('');
+    e.preventDefault();
+    setError('');
 
-  if (formData.password !== formData.confirmPassword) {
-    setError('รหัสผ่านไม่ตรงกัน');
-    return;
-  }
-
-  if (formData.password.length < 6) {
-    setError('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
-    return;
-  }
-
-  setLoading(true);
-
-  try {
-    const requestBody = {
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-      roleId: formData.role === 'seeker' ? 1 : 2,
-    };
-    
-    console.log('📤 ข้อมูลที่ส่งไป:', JSON.stringify(requestBody, null, 2)); // เปลี่ยนเป็น JSON string
-
-    const response = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    const data = await response.json();
-    
-    console.log('📥 Status:', response.status);
-    console.log('📥 Response:', JSON.stringify(data, null, 2)); // เปลี่ยนเป็น JSON string
-    console.log('📥 Error Message:', data.message); // แสดง message โดยตรง
-
-    if (!response.ok) {
-      setError(data.message || 'เกิดข้อผิดพลาด');
-      setLoading(false);
+    // ตรวจสอบรหัสผ่าน
+    if (formData.password !== formData.confirmPassword) {
+      setError('รหัสผ่านไม่ตรงกัน');
       return;
     }
 
-    router.push('/login?registered=true');
-  } catch (error) {
-    console.error('❌ Error:', error);
-    setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
-    setLoading(false);
-  }
-};
+    if (formData.password.length < 6) {
+      setError('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // 1. สมัครสมาชิก
+      const requestBody = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        roleId: formData.role === 'seeker' ? 1 : 2,
+      };
+      
+      console.log('📤 ข้อมูลที่ส่งไป:', JSON.stringify(requestBody, null, 2));
+
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      const data = await response.json();
+      
+      console.log('📥 Status:', response.status);
+      console.log('📥 Response:', JSON.stringify(data, null, 2));
+
+      if (!response.ok) {
+        setError(data.message || 'เกิดข้อผิดพลาด');
+        setLoading(false);
+        return;
+      }
+
+      // 2. Auto Login หลังสมัครสำเร็จ
+      console.log('🔐 กำลัง Login อัตโนมัติ...');
+      const signInResult = await signIn('credentials', {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      });
+
+      console.log('📥 Login Result:', signInResult);
+
+      if (signInResult?.ok) {
+        // 3. Redirect ตาม Role
+        if (formData.role === 'seeker') {
+          console.log('✅ Redirect ไปหน้ากรอกโปรไฟล์ผู้หางาน');
+          router.push('/profile/seeker/create');
+        } else {
+          console.log('✅ Redirect ไปหน้ากรอกโปรไฟล์ร้านค้า');
+          router.push('/profile/shop/create');
+        }
+      } else {
+        // ถ้า login ไม่สำเร็จ ให้ไปหน้า login ธรรมดา
+        console.log('⚠️ Login ไม่สำเร็จ ไปหน้า Login');
+        router.push('/login?registered=true');
+      }
+    } catch (error) {
+      console.error('❌ Error:', error);
+      setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center p-4">
