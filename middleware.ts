@@ -5,29 +5,33 @@ import { getToken } from 'next-auth/jwt';
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // 1. เช็ก path '/' ก่อนเป็นอันดับแรก
-  if (pathname === '/') {
-    return NextResponse.redirect(new URL('/login', req.url));
-  }
-
-  // 2. ค่อยมาเช็ก Token สำหรับ Path อื่นๆ
+  // เช็ก Token
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
-  // (โค้ดส่วนที่เหลือ...)
+  // Protected paths ที่ต้อง login ก่อน
   const protectedPaths = ['/dashboard', '/profile', '/jobs/new'];
   const isProtected = protectedPaths.some(path => pathname.startsWith(path));
 
+  // Auth paths (login, register)
   const authPaths = ['/login', '/register'];
   const isAuthRoute = authPaths.some(path => pathname.startsWith(path));
 
+  // ถ้าเข้า protected path แต่ยัง login ไม่ได้ → ไป login
   if (isProtected && !token) {
     return NextResponse.redirect(new URL('/login', req.url));
   }
 
+  // ถ้า login แล้วแต่พยายามเข้า login/register → ไป dashboard
   if (isAuthRoute && token) {
     return NextResponse.redirect(new URL('/dashboard/seeker', req.url));
   }
 
+  // ถ้าเข้าหน้าแรก '/' และ login แล้ว → ไป dashboard
+  if (pathname === '/' && token) {
+    return NextResponse.redirect(new URL('/dashboard/seeker', req.url));
+  }
+
+  // ไม่งั้นให้ผ่านไปได้ (รวมถึงหน้าแรกสำหรับคนที่ยัง login ไม่ได้)
   return NextResponse.next();
 }
 
