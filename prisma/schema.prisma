@@ -44,19 +44,27 @@ model PasswordReset {
 }
 
 model JobSeekerProfile {
-  seeker_id      Int           @id @map("seeker_id")
-  name           String
+  seeker_id      Int     @id @map("seeker_id")
+  name           String?
   phone          String?
   address        String?
   skills         String?
   experience     String?
-  available_days String?       @map("available_days")
-  profile_image  String?       @map("profile_image")
+  available_days String? @map("available_days")
+  profile_image  String? @map("profile_image")
   latitude       Float?
   longitude      Float?
-  applications   Application[]
-  user           User          @relation("UserToJobSeekerProfile", fields: [seeker_id], references: [user_id], onDelete: Cascade)
-  matches        Match[]
+  gender         String?
+  age            Int?
+  interested_job String? @map("interested_job")
+
+  // ⭐ เพิ่มสองบรรทัดนี้
+  created_at DateTime @default(now()) @map("created_at")
+  updated_at DateTime @updatedAt @map("updated_at")
+
+  applications Application[]
+  user         User @relation("UserToJobSeekerProfile", fields: [seeker_id], references: [user_id], onDelete: Cascade)
+  matches      Match[]
 
   @@map("job_seeker_profiles")
 }
@@ -70,6 +78,10 @@ model ShopProfile {
   latitude    Float?
   longitude   Float?
   image_path  String?  @map("image_path")
+  
+  // ฟิลด์ใหม่สำหรับรูปร้านค้า (เพิ่มเติมจาก image_path)
+  shop_image  String?  @map("shop_image")
+  
   created_at  DateTime @default(now()) @map("created_at")
   updated_at  DateTime @updatedAt @map("updated_at")
   jobs        Job[]

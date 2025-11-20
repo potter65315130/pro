@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Home, User, Briefcase, FileText, Store, Users, Menu, X, Search, Settings, LogOut, MessageSquare, FileCheck } from 'lucide-react';
 
 interface ModernTabBarProps {
@@ -8,6 +9,7 @@ interface ModernTabBarProps {
 }
 
 export default function ModernTabBar({ role }: ModernTabBarProps) {
+  const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('/dashboard');
   const [searchQuery, setSearchQuery] = useState('');
@@ -19,6 +21,7 @@ export default function ModernTabBar({ role }: ModernTabBarProps) {
     { name: 'สรุปรายได้', href: '/income', icon: FileCheck },
     { name: 'Chat', href: '/chat', icon: MessageSquare },
     { name: 'การติดตาม', href: '/following', icon: Users },
+    { name: 'โปรไฟล์', href: '/dashboard/seeker/profile', icon: User },
   ];
 
   const shopMenuItems = [
@@ -27,6 +30,7 @@ export default function ModernTabBar({ role }: ModernTabBarProps) {
     { name: 'ผู้สมัครงาน', href: '/applicants', icon: Users },
     { name: 'สรุปรายได้', href: '/income', icon: FileCheck },
     { name: 'Chat', href: '/chat', icon: MessageSquare },
+    { name: 'โปรไฟล์', href: '/dashboard/shop/profile', icon: User },
   ];
 
   const menuItems = role === 'seeker' ? seekerMenuItems : shopMenuItems;
@@ -34,6 +38,12 @@ export default function ModernTabBar({ role }: ModernTabBarProps) {
   const filteredMenuItems = menuItems.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleNavigation = (href: string) => {
+    setActiveTab(href);
+    setIsSidebarOpen(false);
+    router.push(href);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -81,7 +91,9 @@ export default function ModernTabBar({ role }: ModernTabBarProps) {
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
             </button>
 
-            <button className="w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full 
+            <button 
+              onClick={() => handleNavigation('/dashboard/seeker/profile')}
+              className="w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full 
                            hover:from-blue-600 hover:to-blue-700 transition-all shadow-sm 
                            hover:shadow-md flex items-center justify-center">
               <User className="w-5 h-5 text-white" />
@@ -133,10 +145,7 @@ export default function ModernTabBar({ role }: ModernTabBarProps) {
                   return (
                     <button
                       key={item.href}
-                      onClick={() => {
-                        setActiveTab(item.href);
-                        setIsSidebarOpen(false);
-                      }}
+                      onClick={() => handleNavigation(item.href)}
                       className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive
                         ? 'bg-blue-50 text-blue-600 font-medium'
                         : 'text-gray-700 hover:bg-gray-50'
