@@ -78,10 +78,10 @@ export default function RegisterPage() {
         // 3. Redirect ตาม Role
         if (formData.role === 'seeker') {
           console.log('✅ Redirect ไปหน้ากรอกโปรไฟล์ผู้หางาน');
-          router.push('/profile/seeker/create');
+          router.push('/dashboard/seeker/profile');
         } else {
           console.log('✅ Redirect ไปหน้ากรอกโปรไฟล์ร้านค้า');
-          router.push('/profile/shop/create');
+          router.push('/dashboard/shop/profile');
         }
       } else {
         // ถ้า login ไม่สำเร็จ ให้ไปหน้า login ธรรมดา
