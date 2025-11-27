@@ -23,7 +23,11 @@ export const authOptions: NextAuthOptions = {
           // หา user จาก email
           const user = await prisma.user.findUnique({
             where: { email: credentials.email },
-            include: { role: true },
+            include: {
+              role: true,
+              job_seeker_profile: true,
+              shop_profile: true
+            },
           });
 
           console.log('👤 User found:', user ? 'Yes' : 'No'); // เพิ่ม log
@@ -48,11 +52,33 @@ export const authOptions: NextAuthOptions = {
 
           console.log('✅ Login successful'); // เพิ่ม log
 
+          // Determine name and image based on role
+          let name = null;
+          let image = null;
+
+          const roleName = user.role.role_name.toLowerCase();
+          console.log('👤 User Role:', roleName); // เพิ่ม log
+          console.log('👤 Seeker Profile:', user.job_seeker_profile); // เพิ่ม log
+          console.log('👤 Shop Profile:', user.shop_profile); // เพิ่ม log
+
+          if (roleName === 'seeker' && user.job_seeker_profile) {
+            name = user.job_seeker_profile.name;
+            image = user.job_seeker_profile.profile_image;
+          } else if (roleName === 'shop' && user.shop_profile) {
+            name = user.shop_profile.shop_name;
+            image = user.shop_profile.shop_image || user.shop_profile.image_path;
+          }
+
+          console.log('👤 Determined Name:', name); // เพิ่ม log
+          console.log('👤 Determined Image:', image); // เพิ่ม log
+
           // Return user object
           return {
             id: user.user_id.toString(),
             email: user.email,
             roleId: user.role_id,
+            name: name,
+            image: image,
           };
         } catch (error) {
           console.error('❌ Authorize error:', error);
@@ -68,6 +94,8 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.roleId = user.roleId;
         token.email = user.email;
+        token.name = user.name;
+        token.image = user.image;
       }
       console.log('🎫 JWT Token:', token); // เพิ่ม log
       return token;
@@ -78,6 +106,8 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.roleId = token.roleId as number;
         session.user.email = token.email as string;
+        session.user.name = token.name;
+        session.user.image = token.image;
       }
       console.log('📋 Session:', session); // เพิ่ม log
       return session;

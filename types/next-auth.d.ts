@@ -1,6 +1,9 @@
 import NextAuth, { DefaultSession, DefaultUser } from 'next-auth';
 import { JWT } from 'next-auth/jwt';
 
+import NextAuth, { DefaultSession, DefaultUser } from 'next-auth';
+import { JWT } from 'next-auth/jwt';
+
 // ขยาย (augment) type ของ User
 declare module 'next-auth' {
   /**
@@ -10,7 +13,9 @@ declare module 'next-auth' {
   interface User {
     id: string; // user_id
     roleId: number; // role_id
-    email: string; // <-- เพิ่มบรรทัดนี้
+    email: string;
+    name?: string | null;
+    image?: string | null;
   }
 
   /**
@@ -20,9 +25,10 @@ declare module 'next-auth' {
     user: {
       id: string;
       roleId: number;
-      // เราอาจจะอยากใช้ email ในหน้าเว็บด้วย ก็เพิ่มตรงนี้
       email: string;
-    } & Omit<DefaultSession['user'], 'email'>; // Omit 'email' จาก DefaultSession ถ้ามันซ้ำกัน
+      name?: string | null;
+      image?: string | null;
+    } & Omit<DefaultSession['user'], 'email' | 'name' | 'image'>;
   }
 }
 
@@ -34,7 +40,8 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id: string;
     roleId: number;
-    // email ก็ควรเก็บใน token ด้วย
     email: string;
+    name?: string | null;
+    image?: string | null;
   }
 }
