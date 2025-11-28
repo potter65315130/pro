@@ -1,9 +1,13 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Prompt } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 
-const inter = Inter({ subsets: ['latin'] });
+const prompt = Prompt({
+  subsets: ['latin', 'thai'],
+  weight: ['300', '400', '500', '700'],
+  variable: '--font-prompt',
+});
 
 export const metadata: Metadata = {
   title: 'JobMatch',
@@ -17,7 +21,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="th">
-      <body className={inter.className}>
+      <body className={prompt.variable}>
         <Providers>{children}</Providers>
       </body>
     </html>

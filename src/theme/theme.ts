@@ -24,7 +24,7 @@ const theme = createTheme({
         },
     },
     typography: {
-        fontFamily: '"Prompt", "Noto Sans Thai", "Roboto", "Arial", sans-serif',//font family
+        fontFamily: 'var(--font-prompt), "Noto Sans Thai", "Roboto", "Arial", sans-serif',//font family
         h1: {
             fontSize: '2.5rem',//font size
             fontWeight: 600,

@@ -58,7 +58,6 @@ model JobSeekerProfile {
   age            Int?
   interested_job String? @map("interested_job")
 
-  // ⭐ เพิ่มสองบรรทัดนี้
   created_at DateTime @default(now()) @map("created_at")
   updated_at DateTime @updatedAt @map("updated_at")
 
@@ -78,8 +77,6 @@ model ShopProfile {
   latitude    Float?
   longitude   Float?
   image_path  String?  @map("image_path")
-  
-  // ฟิลด์ใหม่สำหรับรูปร้านค้า (เพิ่มเติมจาก image_path)
   shop_image  String?  @map("shop_image")
   
   created_at  DateTime @default(now()) @map("created_at")
@@ -109,6 +106,14 @@ model Job {
   wage_per_hour Float?        @map("wage_per_hour")
   num_positions Int           @default(1) @map("num_positions")
   status        String        @default("open")
+  
+  // New fields
+  location      String?
+  latitude      Float?
+  longitude     Float?
+  contact_phone String?       @map("contact_phone")
+  required_date DateTime?     @map("required_date")
+
   created_at    DateTime      @default(now()) @map("created_at")
   updated_at    DateTime      @updatedAt @map("updated_at")
   applications  Application[]
